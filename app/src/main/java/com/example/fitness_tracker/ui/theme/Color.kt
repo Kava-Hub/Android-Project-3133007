@@ -2,10 +2,14 @@ package com.example.fitness_tracker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val ScreenBlack = Color(0xFF000000)
+val CardGrey = Color(0xFF1C1C1E)
+val RaisedGrey = Color(0xFF2A2A2D)
+val TextMuted = Color(0xFFA4A4AC)
+val FocusGreen = Color(0xFFCAFF36)
+val MovePink = Color(0xFFFF315E)
+val ExerciseGreen = Color(0xFFB5F500)
+val StandCyan = Color(0xFF25E7ED)
+val StepViolet = Color(0xFFB7A2FF)
+val DistanceBlue = Color(0xFF70C7FF)
+val AwardGold = Color(0xFFFFCB68)
