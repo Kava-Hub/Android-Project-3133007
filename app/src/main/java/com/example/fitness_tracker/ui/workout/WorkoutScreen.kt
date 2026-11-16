@@ -1,6 +1,12 @@
-package com.example.fitness_tracker
+package com.example.fitness_tracker.ui.workout
 
-import android.os.SystemClock
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
+import com.example.fitness_tracker.data.*
+import com.example.fitness_tracker.ui.components.*
+import com.example.fitness_tracker.ui.workout.formatTimer
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -17,13 +23,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,8 +38,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.fitness_tracker.ui.theme.*
-import kotlinx.coroutines.delay
-import java.time.LocalDate
 import java.util.Locale
 
 @Composable
@@ -114,46 +113,16 @@ internal fun PrepareWorkout(type: WorkoutType, start: (Int) -> Unit) {
 }
 
 @Composable
-internal fun ActiveWorkout(type: WorkoutType, target: Int, onSave: (WorkoutLog) -> Unit, onDiscard: () -> Unit) {
-    // Monotonic time counts the session correctly even when Android suspends frame updates.
-    var runningSince by rememberSaveable { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-    var accumulated by rememberSaveable { mutableLongStateOf(0L) }
-    var clock by rememberSaveable { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-    var ending by rememberSaveable { mutableStateOf(false) }
-    var resumeAfterDismiss by rememberSaveable { mutableStateOf(false) }
-
-    fun elapsedMillis(now: Long) = accumulated + if (runningSince < 0) 0 else (now - runningSince).coerceAtLeast(0)
-    fun pause() {
-        accumulated = elapsedMillis(SystemClock.elapsedRealtime())
-        runningSince = -1
-    }
-    fun resume() {
-        clock = SystemClock.elapsedRealtime()
-        runningSince = clock
-    }
-    fun end() {
-        resumeAfterDismiss = runningSince >= 0
-        pause()
-        ending = true
-    }
-    fun dismissEnd() {
-        ending = false
-        if (resumeAfterDismiss) resume()
-        resumeAfterDismiss = false
-    }
-
-    LaunchedEffect(runningSince) {
-        while (runningSince >= 0) {
-            clock = SystemClock.elapsedRealtime()
-            delay(200)
-        }
-    }
-    BackHandler(enabled = !ending) { end() }
-
-    val seconds = elapsedMillis(clock) / 1000
+internal fun ActiveWorkout(
+    type: WorkoutType, target: Int, state: WorkoutState,
+    togglePause: () -> Unit, end: () -> Unit, dismissEnd: () -> Unit,
+    onSave: () -> Unit, onDiscard: () -> Unit,
+) {
+    BackHandler(enabled = !state.ending) { end() }
+    val seconds = state.seconds
     val targetSeconds = target * 60
     ScreenColumn {
-        PageTitle(type.label, if (runningSince >= 0) "WORKOUT IN PROGRESS" else "WORKOUT PAUSED")
+        PageTitle(type.label, if (state.running) "WORKOUT IN PROGRESS" else "WORKOUT PAUSED")
         WorkoutBadge(type)
         Panel(Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -181,24 +150,20 @@ internal fun ActiveWorkout(type: WorkoutType, target: Int, onSave: (WorkoutLog) 
                 }
             }
         }
-        ActionButton(if (runningSince >= 0) "Pause" else "Resume", {
-            if (runningSince >= 0) pause() else resume()
-        }, primary = true, icon = if (runningSince >= 0) Glyph.Pause else Glyph.Play)
+        ActionButton(if (state.running) "Pause" else "Resume", togglePause, primary = true, icon = if (state.running) Glyph.Pause else Glyph.Play)
         ActionButton("End Workout", { end() }, icon = Glyph.Stop)
     }
 
-    if (ending) {
+    if (state.ending) {
         AlertDialog(
-            onDismissRequest = ::dismissEnd,
+            onDismissRequest = dismissEnd,
             title = { Text("Workout Summary") },
             text = { Text("${type.label} · ${formatTimer(seconds)}") },
             confirmButton = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    if (seconds > 0) ActionButton("Save Session", {
-                        onSave(WorkoutLog(System.currentTimeMillis(), type, seconds, LocalDate.now()))
-                    }, primary = true, icon = Glyph.Check)
+                    if (seconds > 0) ActionButton("Save Session", onSave, primary = true, icon = Glyph.Check)
                     ActionButton("Discard", onDiscard)
-                    ActionButton("Keep Going", ::dismissEnd)
+                    ActionButton("Keep Going", dismissEnd)
                 }
             }
         )

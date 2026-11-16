@@ -1,4 +1,9 @@
-package com.example.fitness_tracker
+package com.example.fitness_tracker.ui.components
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
+import com.example.fitness_tracker.data.*
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -28,7 +33,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +48,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
@@ -72,7 +77,7 @@ internal fun Modifier.press(
 ): Modifier {
     val source = remember { MutableInteractionSource() }
     val down by source.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (down) 0.965f else 1f, tween(if (down) 85 else 180), label = "Press")
+    val scale by animateFloatAsState(if (down) 0.94f else 1f, tween(if (down) 85 else 180), label = "Press")
     val animated = graphicsLayer {
         scaleX = scale
         scaleY = scale
@@ -193,6 +198,7 @@ internal fun ActivityRings(
     modifier: Modifier,
     description: String? = null,
     animate: Boolean = true,
+    arrows: Boolean = false,
 ) {
     val fractions = if (animate) {
         listOf(
@@ -217,20 +223,34 @@ internal fun ActivityRings(
             drawCircle(tint.copy(alpha = 0.19f), radius, style = style)
             if (!fraction.isFinite() || fraction <= 0f) return@forEachIndexed
 
-            val gradient = Brush.sweepGradient(
-                0f to tint, 1f to tint, 1f to lerp(tint, Color.Black, 1f), 1f to tint,
-                center = center
-            )
+            val shades = listOf(MovePink70 to MovePink90, ExerciseGreen70 to ExerciseGreen90, StandCyan70 to StandCyan90)[index]
+            val complete = fraction >= 1f
             val lapSweep = (fraction % 1f) * 360f
-            if (fraction >= 1f) {
-                drawCircle(gradient, radius, style = style)
-            } else {
-                drawArc(gradient, startAngle, lapSweep, false, origin, bounds, style = style)
-            }
-
-            val endRadians = (startAngle + lapSweep) * PI / 180
+            val endAngle = startAngle + lapSweep
+            val endRadians = endAngle * PI / 180
             val radial = Offset(cos(endRadians).toFloat(), sin(endRadians).toFloat())
             val tail = center + radial * radius
+            val endColor = lerp(shades.first, shades.second, fraction.coerceAtMost(1f))
+
+            if (complete) {
+                // Paint the last visible revolution. Its seam follows the overlapping tip,
+                // rather than leaving a permanent color jump at twelve o'clock.
+                rotate(endAngle, center) {
+                    drawCircle(Brush.sweepGradient(listOf(shades.first, shades.second), center), radius, style = style)
+                }
+            } else {
+                // Rotate the canvas, not the stops: the shader's seam stays outside the arc.
+                // Butt ends plus solid caps prevent the shader wrapping inside a round start cap.
+                val gradient = Brush.sweepGradient(
+                    0f to shades.first, fraction to endColor, 1f to shades.second, center = center,
+                )
+                rotate(startAngle, center) {
+                    drawArc(gradient, 0f, fraction * 360f, false, origin, bounds,
+                        style = Stroke(stroke, cap = StrokeCap.Butt))
+                }
+                drawCircle(shades.first, capRadius, center + Offset(0f, -radius))
+            }
+
             // Mask the shadow to this band's inner and outer edges before layering the tail over it.
             val lane = Path().apply {
                 fillType = PathFillType.EvenOdd
@@ -248,7 +268,7 @@ internal fun ActivityRings(
                 lineTo(tail.x - side.x + forward.x, tail.y - side.y + forward.y)
                 close()
             }
-            clipPath(lane) {
+            if (complete) clipPath(lane) {
                 clipPath(exposedEdge) {
                     drawCircle(
                         Brush.radialGradient(
@@ -263,7 +283,22 @@ internal fun ActivityRings(
                     )
                 }
             }
-            drawCircle(gradient, radius = capRadius, center = tail)
+            drawCircle(endColor, radius = capRadius, center = tail)
+            if (arrows) {
+                val y = center.y - radius
+                val a = stroke * 0.24f
+                val path = Path().apply {
+                    if (index == 2) {
+                        moveTo(center.x, y + a); lineTo(center.x, y - a)
+                        moveTo(center.x - a, y); lineTo(center.x, y - a); lineTo(center.x + a, y)
+                    } else {
+                        moveTo(center.x - a, y); lineTo(center.x + a, y)
+                        moveTo(center.x, y - a); lineTo(center.x + a, y); lineTo(center.x, y + a)
+                        if (index == 1) { moveTo(center.x + a, y - a); lineTo(center.x + a * 2, y); lineTo(center.x + a, y + a) }
+                    }
+                }
+                drawPath(path, ScreenBlack, style = Stroke(stroke * 0.09f, cap = StrokeCap.Round))
+            }
         }
     }
 }

@@ -1,10 +1,12 @@
-package com.example.fitness_tracker
+package com.example.fitness_tracker.ui.sharing
+
+import com.example.fitness_tracker.data.*
+import com.example.fitness_tracker.ui.components.*
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -14,11 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.example.fitness_tracker.ui.theme.*
-import kotlin.compareTo
 
 @Composable
 internal fun SharingScreen(friends: List<Friend>, open: (String) -> Unit) {
@@ -33,7 +32,6 @@ internal fun SharingScreen(friends: List<Friend>, open: (String) -> Unit) {
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SectionTitle("Highlights", "Sample friends")
-                // Let the next card peek into view to signal that the highlights scroll sideways.
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     itemsIndexed(friends) { index, friend ->
                         HighlightCard(friend, Modifier.fillParentMaxWidth(0.83f)) { open("friend/$index") }
