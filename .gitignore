@@ -1,4 +1,6 @@
-# Gradle files
+.DS_Store
+
+#Gradle files
 .gradle/
 build/
 .kotlin/
