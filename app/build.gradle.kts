@@ -10,7 +10,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.fitness_tracker"
+        // use a separate installation so tests never clear the user's app data.
+        applicationId = "com.example.fitness_tracker" +
+                if (providers.gradleProperty("verificationBuild").orNull == "true") ".verification" else ""
         minSdk = 33
         targetSdk = 37
         versionCode = 1
@@ -44,6 +46,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
